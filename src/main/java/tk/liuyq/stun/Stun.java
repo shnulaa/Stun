@@ -64,7 +64,7 @@ public class Stun {
   static final int STUN_XOR_MAPPED_ADDRESS = 0x0020; // stun_xor_mapped_address
 
   /** default socket timeout **/
-  static final int SOCKET_TOMEOUT = 10000;
+  static final int SOCKET_TOMEOUT = 5000;
 
   /**
    * Parse Stun Response Raw
@@ -182,7 +182,7 @@ public class Stun {
   private String getNatType(String sourceIp, int sourcePort, String stunHost, int stunPort)
       throws SocketException {
     try (DatagramSocket socket = new DatagramSocket(sourcePort);) {
-      socket.setSoTimeout(10000);
+      socket.setSoTimeout(SOCKET_TOMEOUT);
       return getNatType(socket, sourceIp, sourcePort, stunHost, stunPort);
     } catch (Exception e) {
       throw new RuntimeException(e);
@@ -205,9 +205,11 @@ public class Stun {
    */
   private String getNatType(DatagramSocket socket, String sourceIp, int sourcePort, String stunHost,
       int stunPort) throws IOException {
-
     Map<String, String> map = new LinkedHashMap<>();
     if (stunHost != null && !stunHost.isEmpty()) {
+      System.out.println(String.format(
+          "request to stun server:%s, port:%s, sourceIp:%s, sourcePort:%s, sendDate:%s", stunHost,
+          stunPort, sourceIp, sourcePort, "nothing"));
       map = stunRequest(socket, stunHost, stunPort, sourceIp, sourcePort, new byte[] {});
     }
 
@@ -216,7 +218,11 @@ public class Stun {
     String changedIP = map.get("ChangedIP");
     String changedPort = map.get("ChangedPort");
     if (sourceIp.equals(exIP)) {
-      System.out.println("sourceIp equal exIP, begin Change Request Test.");
+      System.out.println(String.format(
+          "(Change host and port)request to stun server:%s, port:%s,"
+              + " sourceIp:%s, sourcePort:%s, sendDate:%s due to sourceIp equal exIP,",
+          stunHost, stunPort, sourceIp, sourcePort, "nothing"));
+
       map = stunRequest(socket, stunHost, stunPort, sourceIp, sourcePort,
           constructAttrChangeRequest());
       if (map.size() > 0) {
@@ -225,7 +231,10 @@ public class Stun {
         return "SymmetricUDPFirewall";
       }
     } else {
-      System.out.println("sourceIp not equal exIP, begin Change Request Test.");
+      System.out.println(String.format(
+          "(Change port)request to stun server:%s, port:%s,"
+              + " sourceIp:%s, sourcePort:%s, sendDate:%s due to sourceIp not equal exIP,",
+          stunHost, stunPort, sourceIp, sourcePort, "nothing"));
       map = stunRequest(socket, stunHost, stunPort, sourceIp, sourcePort,
           constructAttrChangeRequest());
       if (map.size() > 0) {
@@ -272,7 +281,7 @@ public class Stun {
     Map<String, String> map = new LinkedHashMap<>();
     try {
       byte[] raw = constructRequest(sendData);
-      System.out.println(Arrays.toString(raw));
+      // System.out.println(Arrays.toString(raw));
       InetAddress addr = InetAddress.getByName(host);
       DatagramPacket sendPacket = new DatagramPacket(raw, raw.length, addr, port);
       socket.send(sendPacket);
@@ -397,11 +406,11 @@ public class Stun {
    * @throws SocketException
    */
   public static void main(String[] args) throws SocketException {
-    int localPort = 25451;
+    int localPort = 25452;
     if (args.length == 1) {
       localPort = Integer.valueOf(args[0]);
     }
-    System.out.println(localPort);
+    System.out.println(String.format("localPort:%s", localPort));
     Stun stun = new Stun();
     System.out.println(stun.getNatType("127.0.0.1", localPort, "stun.ekiga.net", 3478));
   }
